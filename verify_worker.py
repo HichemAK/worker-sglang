@@ -19,12 +19,13 @@ def section(t):
 
 # --- 1. versions ---------------------------------------------------------
 section("1. VERSIONS")
+from importlib.metadata import version
 import torch
 import transformers
-import sglang
+import sglang  # noqa: F401  (import proves it loads)
 
-print("sglang      :", sglang.__version__)
-print("transformers:", transformers.__version__)
+print("sglang      :", version("sglang"))
+print("transformers:", version("transformers"))
 print("torch       :", torch.__version__)
 
 

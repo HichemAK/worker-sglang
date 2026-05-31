@@ -16,8 +16,11 @@ WORKDIR /sgl-workspace
 
 # install dependencies
 COPY requirements.txt ./
+# The CUDA-13 base is Ubuntu 24.04 / Python 3.12, whose system interpreter is
+# PEP-668 "externally managed"; --break-system-packages lets uv install into it
+# (the old cu126 base on Ubuntu 22.04 did not need this).
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system -r requirements.txt
+    uv pip install --system --break-system-packages -r requirements.txt
 
 # copy source files
 COPY handler.py engine.py utils.py download_model.py test_input.json ./
