@@ -20,6 +20,8 @@ services:
       - SAMPLING_BACKEND=flashinfer
       - TOOL_CALL_PARSER=llama3
       # - REASONING_PARSER=llama3
+      # - KV_CACHE_DTYPE=fp8_e4m3        # FP8 KV cache; needs Ada/Hopper/Blackwell (SM89+)
+      # - EXTRA_ARGS=--enable-metrics    # escape hatch: any extra sglang.launch_server flag(s)
       - HF_TOKEN=${HF_TOKEN}
 
       # make it work locally with <= 8 GB VRAM

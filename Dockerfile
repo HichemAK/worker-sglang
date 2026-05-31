@@ -1,4 +1,10 @@
-FROM lmsysorg/sglang:v0.5.2-cu126
+# Base image tracks the latest STABLE SGLang release.
+# v0.5.12.post1 pins transformers==5.6.0 / torch==2.11.0 / flashinfer==0.6.11.post1.
+# The -cu130 tag is SGLang's default CUDA 13.0 build; its prebuilt kernels cover
+# SM80 (Ampere) through SM120 (Blackwell, incl. RTX PRO 6000). Requires host
+# NVIDIA driver R580+. For older datacenter drivers (R525/R570), swap to
+# lmsysorg/sglang:v0.5.12.post1-cu129 (same arch coverage, larger image).
+FROM lmsysorg/sglang:v0.5.12.post1-cu130
 
 # Install uv package manager
 RUN curl -Ls https://astral.sh/uv/install.sh | sh \

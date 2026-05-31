@@ -53,6 +53,9 @@ All behaviour is controlled through environment variables:
 | `TRITON_ATTENTION_REDUCE_IN_FP32` | Cast Triton attention reduce op to FP32           | false                                 | boolean (true or false)                                                                   |
 | `TOOL_CALL_PARSER`                | Defines the parser used to interpret responses    |                                       | "llama3", "llama4", "mistral", "qwen25", "deepseekv3"                                     |
 | `REASONING_PARSER`                | Defines the parser used for reasoning traces      |                                       | "llama3", "llama4", "mistral", "qwen25", "deepseekv3"                                     |
+| `ATTENTION_BACKEND`               | Attention kernel backend (`--attention-backend`)  |                                       | "flashinfer", "triton", "torch_native", "fa3" (availability is GPU/arch-dependent)        |
+| `KV_CACHE_DTYPE`                  | KV-cache quantization dtype (`--kv-cache-dtype`)   | "auto"                                | "auto", "fp8_e4m3", "fp8_e5m2" (FP8 KV cache needs **Ada/Hopper/Blackwell**, i.e. SM89+)  |
+| `EXTRA_ARGS`                      | Escape hatch: extra `sglang.launch_server` flags appended verbatim (see note below) |                     | Any flag string, e.g. `--enable-metrics --grammar-backend xgrammar`                       |
 
 ## Tool/Function Calling and Reasoning
 
@@ -64,6 +67,17 @@ All behaviour is controlled through environment variables:
 - **Reasoning**: Set the `REASONING_PARSER` environment variable to match your model family if you want to enable reasoning traces parsing. If unset, this worker does not pass `--reasoning-parser` to SGLang.
   - Example (docker-compose): add `# REASONING_PARSER=llama3` under `environment:` (uncomment to use).
   - Example (RunPod Hub): set the `REASONING_PARSER` env var in the UI.
+
+## KV-cache quantization, attention backend, and `EXTRA_ARGS`
+
+- **`KV_CACHE_DTYPE`** maps to SGLang's `--kv-cache-dtype`. Use `fp8_e4m3` or `fp8_e5m2` to store the KV cache in FP8, which roughly halves KV memory and lets you fit longer contexts / more concurrent requests. FP8 KV cache is **GPU-dependent**: it requires Ada (L40/L40S/RTX 6000 Ada), Hopper (H100), or Blackwell (RTX PRO 6000) — i.e. compute capability **SM89+**. It does **not** work on Ampere (A100/A6000, SM80). Leave it unset (`auto`) on Ampere.
+- **`ATTENTION_BACKEND`** maps to `--attention-backend`. Leave unset to let SGLang auto-select the best backend for the detected GPU. Some backends are arch-specific (e.g. `fa3` targets Hopper/Blackwell); an unsupported choice will fail at startup, so only override if you know the backend fits your GPU.
+- **`EXTRA_ARGS`** is a generic, future-proof escape hatch: its contents are split with `shlex` and appended verbatim to the `python3 -m sglang.launch_server` command. Use it to pass any SGLang flag this worker does not expose a dedicated env var for — no re-fork needed.
+  - **Precedence:** flags set through their own env vars (above) always win. If `EXTRA_ARGS` repeats a flag that is already set (e.g. you set both `KV_CACHE_DTYPE` and `--kv-cache-dtype` in `EXTRA_ARGS`), the `EXTRA_ARGS` copy is dropped so it can't duplicate or clobber the explicit setting. Flags not otherwise set pass through unchanged.
+  - For an `EXTRA_ARGS` value that begins with `-`, use the `--flag=value` form (e.g. `--foo=-1`) so it isn't mistaken for a separate flag.
+  - Example: `EXTRA_ARGS=--enable-metrics --schedule-policy lpm`.
+
+> **GPU/arch-dependent features — read before enabling.** Several options only work on specific GPU generations. `QUANTIZATION=fp8` and FP8 weight checkpoints need **Ada or newer (SM89+)**. `KV_CACHE_DTYPE=fp8_*` likewise needs **SM89+**. FP4/NVFP4 weights and hybrid-architecture KV quantization need **Blackwell (SM100/SM120)**. On Ampere (A100/A6000) stick to `auto`/bf16/FP16 and INT-based quant (AWQ/GPTQ). Enabling an unsupported feature will fail at server startup rather than silently degrade.
 
 ## API Usage
 

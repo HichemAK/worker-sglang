@@ -71,9 +71,11 @@ chore(deps): update requirements.txt
 
 - CUDA policy:
 
-  - Minimum supported CUDA is 12.6.
-  - Base images must match this (e.g., `lmsysorg/sglang:vX.Y.Z-cu126`).
-  - Keep `allowedCudaVersions` in `hub.json` at 12.6 or higher.
+  - Minimum supported CUDA is 13.0 (SGLang's default since v0.5.12; requires host driver R580+).
+  - Base images must match this (e.g., `lmsysorg/sglang:vX.Y.Z-cu130`). The cu130 build's
+    prebuilt kernels cover SM80 (Ampere) through SM120 (Blackwell).
+  - Keep `allowedCudaVersions` in `hub.json` at 13.0 or higher so the worker only schedules
+    on hosts whose driver can run the CUDA 13.0 image.
 
 - Tool/function calling and reasoning:
   - `TOOL_CALL_PARSER`: required to enable tool/function calling; no runtime default is applied. If unset, `--tool-call-parser` is not passed to SGLang.
