@@ -9,7 +9,7 @@
     "containerDiskInGb": 100,
     "gpuIds": "ADA_24",
     "gpuCount": 1,
-    "allowedCudaVersions": ["13.1", "13.0"],
+    "allowedCudaVersions": ["13.1", "13.0", "12.9", "12.8"],
     "env": [
       {
         "key": "MODEL_NAME",
