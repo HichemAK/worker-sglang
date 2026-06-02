@@ -71,12 +71,14 @@ chore(deps): update requirements.txt
 
 - CUDA policy:
 
-  - Minimum supported CUDA is 12.8 (the cu129 base runs on host driver R525+; broad fleet
-    compatibility). The cu130 default needs R580+ and fails CUDA init on older hosts.
+  - The cu129 (CUDA 12.9) base runs on any host driver in the CUDA-12 family (R525+) via
+    minor-version compatibility, so it works on the common RunPod fleet (observed: RTX 4090
+    on driver 565.57.01 / CUDA 12.7). The cu130 default needs R580+ and fails CUDA init on
+    those hosts.
   - Base images use the cu129 build (e.g., `lmsysorg/sglang:vX.Y.Z-cu129`); its prebuilt
     kernels cover SM80 (Ampere) through SM120 (Blackwell). Same SGLang/Transformers as cu130.
-  - Keep `allowedCudaVersions` in `hub.json` at 12.8 or higher so the worker schedules onto
-    the broadest fleet while excluding hosts too old for these kernels.
+  - Keep `allowedCudaVersions` in `hub.json`/`tests.json` covering 12.6-13.1. Do NOT raise the
+    floor above the fleet's reported CUDA (12.7 today) or the worker won't schedule at all.
 
 - Tool/function calling and reasoning:
   - `TOOL_CALL_PARSER`: required to enable tool/function calling; no runtime default is applied. If unset, `--tool-call-parser` is not passed to SGLang.
