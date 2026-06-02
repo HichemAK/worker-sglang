@@ -9,7 +9,7 @@
     "containerDiskInGb": 100,
     "gpuIds": "ADA_24",
     "gpuCount": 1,
-    "allowedCudaVersions": ["12.7", "12.6", "12.5", "12.4"],
+    "allowedCudaVersions": ["13.1", "13.0", "12.9", "12.8", "12.7", "12.6"],
     "env": [
       {
         "key": "MODEL_PATH",
@@ -468,6 +468,33 @@
           "type": "boolean",
           "description": "Cast Triton attention results to fp32",
           "default": false,
+          "required": false,
+          "advanced": true
+        }
+      },
+      {
+        "key": "KV_CACHE_DTYPE",
+        "input": {
+          "name": "KV Cache Dtype",
+          "type": "string",
+          "description": "KV cache quantization dtype. FP8 needs Ada/Hopper/Blackwell (SM89+); leave auto on Ampere (A100/A6000).",
+          "default": "auto",
+          "required": false,
+          "options": [
+            { "value": "auto", "label": "auto" },
+            { "value": "fp8_e4m3", "label": "fp8_e4m3" },
+            { "value": "fp8_e5m2", "label": "fp8_e5m2" }
+          ],
+          "advanced": true
+        }
+      },
+      {
+        "key": "EXTRA_ARGS",
+        "input": {
+          "name": "Extra Args",
+          "type": "string",
+          "description": "Escape hatch: extra sglang.launch_server flags appended verbatim (parsed with shlex). Dedicated env vars above take precedence. Example: --enable-metrics --schedule-policy lpm",
+          "default": "",
           "required": false,
           "advanced": true
         }

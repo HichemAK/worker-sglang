@@ -1,8 +1,16 @@
-FROM lmsysorg/sglang:v0.4.6.post4-cu124
+# Base image bumped from the 1.2.0 default (v0.4.6.post4-cu124) to the latest
+# STABLE SGLang. v0.5.12.post1 pins transformers==5.6.0 / torch==2.11.0 /
+# flashinfer==0.6.11.post1, so recent architectures (e.g. qwen3_5) parse instead
+# of failing config validation. The -cu129 (CUDA 12.9) build's prebuilt kernels
+# cover SM80 (Ampere) through SM120 (Blackwell, incl. RTX PRO 6000) and run on
+# any CUDA-12 host driver (R525+) via minor-version compatibility -- including
+# RunPod's current fleet (observed: RTX 4090 on driver 565 / CUDA 12.7). The
+# cu130 default needs R580+ and fails CUDA init on those hosts.
+FROM lmsysorg/sglang:v0.5.12.post1-cu129
 
-# Install uv package manager
+# Install uv package manager (-f so it is idempotent if the base already ships uv)
 RUN curl -Ls https://astral.sh/uv/install.sh | sh \
-    && ln -s /root/.local/bin/uv /usr/local/bin/uv
+    && ln -sf /root/.local/bin/uv /usr/local/bin/uv
 ENV PATH="/root/.local/bin:${PATH}"
 
 # Set working directory to the one already used by the base image
@@ -10,8 +18,10 @@ WORKDIR /sgl-workspace
 
 # install dependencies
 COPY requirements.txt ./
+# --break-system-packages: the v0.5.12 base is Ubuntu 24.04 / Python 3.12, whose
+# system interpreter is PEP-668 "externally managed" (the old cu124 base was not).
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system -r requirements.txt
+    uv pip install --system --break-system-packages -r requirements.txt
 
 # copy source files
 COPY handler.py engine.py utils.py download_model.py test_input.json ./

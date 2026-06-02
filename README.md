@@ -52,6 +52,22 @@ All behaviour is controlled through environment variables:
 | `ENABLE_FLASHINFER_MLA`           | Enable FlashInfer MLA optimization                | false                                 | boolean (true or false)                                                                   |
 | `TRITON_ATTENTION_REDUCE_IN_FP32` | Cast Triton attention reduce op to FP32           | false                                 | boolean (true or false)                                                                   |
 | `TOOL_CALL_PARSER`                | Defines the parser used to interpret responses    | qwen25                                | "llama3", "llama4", "mistral", "qwen25", "deepseekv3"                                     |
+| `ATTENTION_BACKEND`               | Attention kernel backend (`--attention-backend`)  |                                       | "flashinfer", "triton", "torch_native", "fa3" (availability is GPU/arch-dependent)        |
+| `KV_CACHE_DTYPE`                  | KV-cache quantization dtype (`--kv-cache-dtype`)   | "auto"                                | "auto", "fp8_e4m3", "fp8_e5m2" (FP8 KV cache needs **Ada/Hopper/Blackwell**, i.e. SM89+)  |
+| `EXTRA_ARGS`                      | Escape hatch: extra `sglang.launch_server` flags appended verbatim (see note below) |                     | Any flag string, e.g. `--enable-metrics --schedule-policy lpm`                            |
+
+## KV-cache quantization, attention backend, and `EXTRA_ARGS`
+
+- **`KV_CACHE_DTYPE`** maps to SGLang's `--kv-cache-dtype`. Use `fp8_e4m3` or `fp8_e5m2` to store the KV cache in FP8, which roughly halves KV memory and lets you fit longer contexts / more concurrent requests. FP8 KV cache is **GPU-dependent**: it requires Ada (L40/L40S/RTX 6000 Ada), Hopper (H100), or Blackwell (RTX PRO 6000) — compute capability **SM89+**. It does **not** work on Ampere (A100/A6000/A40, SM80/86). Leave it unset (`auto`) there.
+- **`ATTENTION_BACKEND`** maps to `--attention-backend`. Leave unset to let SGLang auto-select the best backend for the detected GPU. Some backends are arch-specific (e.g. `fa3` targets Hopper/Blackwell); an unsupported choice fails at startup, so only override if you know it fits your GPU.
+- **`EXTRA_ARGS`** is a generic, future-proof escape hatch: its contents are split with `shlex` and appended verbatim to `python3 -m sglang.launch_server`. Use it to pass any SGLang flag this worker has no dedicated env var for — no re-fork needed.
+  - **Precedence:** flags set through their own env vars (above) always win. If `EXTRA_ARGS` repeats an already-set flag, the `EXTRA_ARGS` copy (and its value) is dropped, so it can't duplicate/clobber a flag or crash argparse. Flags not otherwise set pass through unchanged.
+  - For an `EXTRA_ARGS` value that begins with `-`, use the `--flag=value` form (e.g. `--foo=-1`).
+  - Example: `EXTRA_ARGS=--enable-metrics --schedule-policy lpm`.
+
+> **GPU/arch-dependent features.** `QUANTIZATION=fp8` and FP8 weight checkpoints need **Ada or newer (SM89+)**. `KV_CACHE_DTYPE=fp8_*` likewise needs **SM89+**. FP4/NVFP4 weights and hybrid-arch KV quantization need **Blackwell (SM100/SM120)**. On Ampere (A100/A6000/A40) stick to `auto`/bf16/FP16 and INT quant (AWQ/GPTQ). Enabling an unsupported feature fails at server startup rather than silently degrading.
+>
+> **CUDA / driver.** This image is the **cu129 (CUDA 12.9)** build. It runs on any CUDA-12 host driver (R525+) via minor-version compatibility — including RunPod's current fleet (e.g. RTX 4090 on driver 565 / CUDA 12.7). `allowedCudaVersions` is set to 12.6–13.1 to match that fleet; do not raise the floor above the host's reported CUDA or the worker won't schedule.
 
 ## API Usage
 
