@@ -11,21 +11,29 @@ import shlex
 class SGlangEngine:
     def __init__(
         self,
-        model=os.getenv("MODEL_PATH"),
+        model=None,
         host=os.getenv("HOST", "0.0.0.0"),
         port=int(os.getenv("PORT", 30000)),
     ):
-        self.model = model
+        # Accept MODEL_NAME as an alias for MODEL_PATH so the worker is drop-in
+        # regardless of which the endpoint sets: 1.2.0 uses MODEL_PATH, while the
+        # 2.x line and many RunPod templates use MODEL_NAME. MODEL_PATH wins if
+        # both are set. Write it back so the launch-arg builder picks it up and
+        # SGLang gets --model-path (otherwise it aborts: "--model-path required").
+        if not os.getenv("MODEL_PATH") and os.getenv("MODEL_NAME"):
+            os.environ["MODEL_PATH"] = os.environ["MODEL_NAME"]
+        self.model = model if model is not None else os.getenv("MODEL_PATH")
         self.host = host
         self.port = port
         self.base_url = f"http://{self.host}:{self.port}"
         self.process = None
 
     def start_server(self):
+        # `sglang serve` is the recommended entrypoint in SGLang 0.5.x; it shares
+        # the same args as the deprecated `python -m sglang.launch_server`.
         command = [
-            "python3",
-            "-m",
-            "sglang.launch_server",
+            "sglang",
+            "serve",
             "--host",
             self.host,
             "--port",

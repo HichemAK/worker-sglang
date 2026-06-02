@@ -65,7 +65,7 @@ captured = {}
 
 
 def run_case(label, env):
-    for k in ["MODEL_PATH", "KV_CACHE_DTYPE", "ATTENTION_BACKEND", "EXTRA_ARGS"]:
+    for k in ["MODEL_PATH", "MODEL_NAME", "KV_CACHE_DTYPE", "ATTENTION_BACKEND", "EXTRA_ARGS"]:
         os.environ.pop(k, None)
     os.environ.update(env)
     sys.modules.pop("engine", None)
@@ -76,7 +76,7 @@ def run_case(label, env):
             captured["cmd"] = cmd
             self.pid = 0
     eng.subprocess.Popen = FakePopen
-    eng.SGlangEngine(model=env["MODEL_PATH"]).start_server()
+    eng.SGlangEngine().start_server()  # model resolved from env (MODEL_PATH/MODEL_NAME)
     cmd = captured["cmd"]
     print(f"\n--- {label} ---\n" + " ".join(shlex.quote(c) for c in cmd))
     return cmd
@@ -85,7 +85,13 @@ def run_case(label, env):
 base = {"MODEL_PATH": "meta-llama/Llama-3.2-1B-Instruct"}
 
 c1 = run_case("A. all new vars UNSET", base)
+assert c1[:2] == ["sglang", "serve"], "entrypoint should be 'sglang serve'"
+assert c1[c1.index("--model-path") + 1] == base["MODEL_PATH"]
 assert "--kv-cache-dtype" not in c1 and "--attention-backend" not in c1
+
+# The bug fix: MODEL_NAME (no MODEL_PATH) must still yield --model-path.
+cF = run_case("F. MODEL_NAME alias only (no MODEL_PATH)", {"MODEL_NAME": "Qwen/Qwen3-0.6B"})
+assert cF[cF.index("--model-path") + 1] == "Qwen/Qwen3-0.6B", "MODEL_NAME alias not honored!"
 
 c2 = run_case("B. KV_CACHE_DTYPE + ATTENTION_BACKEND set",
               {**base, "KV_CACHE_DTYPE": "fp8_e4m3", "ATTENTION_BACKEND": "flashinfer"})

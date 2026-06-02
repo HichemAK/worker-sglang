@@ -44,7 +44,7 @@ ENV MODEL_PATH=$MODEL_PATH \
     HF_DATASETS_CACHE="${BASE_PATH}/huggingface-cache/datasets" \
     HUGGINGFACE_HUB_CACHE="${BASE_PATH}/huggingface-cache/hub" \
     HF_HOME="${BASE_PATH}/huggingface-cache/hub" \
-    HF_HUB_ENABLE_HF_TRANSFER=1
+    HF_XET_HIGH_PERFORMANCE=1
 
 # Model download script execution
 # Ensure this script uses python3 and handles paths correctly relative to /app if needed
