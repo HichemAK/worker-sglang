@@ -8,6 +8,17 @@
 # cu130 default needs R580+ and fails CUDA init on those hosts.
 FROM lmsysorg/sglang:v0.5.12.post1-cu129
 
+# The cu129 base bakes NVIDIA_REQUIRE_CUDA="cuda>=12.9", which makes the NVIDIA
+# container runtime REFUSE to start the container (at init, before any code runs)
+# on hosts whose driver reports CUDA < 12.9 -- e.g. RunPod's RTX 4090 fleet on
+# driver 565 / CUDA 12.7:
+#   nvidia-container-cli: requirement error: unsatisfied condition: cuda>=12.9
+# That gate is keyed to the toolkit's *native* driver and ignores CUDA-12
+# minor-version compatibility. Relax it to the CUDA-12 floor (R525 / CUDA 12.0)
+# so the container starts; the cu129 toolkit then runs on any R525+ driver via
+# minor-version compatibility. (It still won't run on CUDA-11 drivers.)
+ENV NVIDIA_REQUIRE_CUDA="cuda>=12.0"
+
 # Install uv package manager (-f so it is idempotent if the base already ships uv)
 RUN curl -Ls https://astral.sh/uv/install.sh | sh \
     && ln -sf /root/.local/bin/uv /usr/local/bin/uv
